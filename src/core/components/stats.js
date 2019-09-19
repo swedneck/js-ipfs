@@ -1,6 +1,6 @@
 'use strict'
 
-const promisify = require('promisify-es6')
+const callbackify = require('callbackify')
 const Big = require('bignumber.js')
 const Pushable = require('pull-pushable')
 const human = require('human-to-milliseconds')
@@ -8,34 +8,34 @@ const toStream = require('pull-stream-to-stream')
 const errCode = require('err-code')
 
 function bandwidthStats (self, opts) {
-  return new Promise((resolve, reject) => {
-    let stats
+  let stats
 
-    if (opts.peer) {
-      stats = self.libp2p.stats.forPeer(opts.peer)
-    } else if (opts.proto) {
-      stats = self.libp2p.stats.forProtocol(opts.proto)
-    } else {
-      stats = self.libp2p.stats.global
+  if (opts.peer) {
+    stats = self.libp2p.stats.forPeer(opts.peer)
+  } else if (opts.proto) {
+    stats = self.libp2p.stats.forProtocol(opts.proto)
+  } else {
+    stats = self.libp2p.stats.global
+  }
+
+  if (!stats) {
+    return {
+      totalIn: new Big(0),
+      totalOut: new Big(0),
+      rateIn: new Big(0),
+      rateOut: new Big(0)
     }
+  }
 
-    if (!stats) {
-      resolve({
-        totalIn: new Big(0),
-        totalOut: new Big(0),
-        rateIn: new Big(0),
-        rateOut: new Big(0)
-      })
-      return
-    }
+  const snapshot = stats.snapshot
+  const movingAverages = stats.movingAverages
 
-    resolve({
-      totalIn: stats.snapshot.dataReceived,
-      totalOut: stats.snapshot.dataSent,
-      rateIn: new Big(stats.movingAverages.dataReceived['60000'].movingAverage() / 60),
-      rateOut: new Big(stats.movingAverages.dataSent['60000'].movingAverage() / 60)
-    })
-  })
+  return {
+    totalIn: snapshot.dataReceived,
+    totalOut: snapshot.dataSent,
+    rateIn: new Big(movingAverages.dataReceived['60000'].movingAverage() / 60),
+    rateOut: new Big(movingAverages.dataSent['60000'].movingAverage() / 60)
+  }
 }
 
 module.exports = function stats (self) {
@@ -84,17 +84,8 @@ module.exports = function stats (self) {
   return {
     bitswap: require('./bitswap')(self).stat,
     repo: require('./repo')(self).stat,
-    bw: promisify((opts, callback) => {
-      if (typeof opts === 'function') {
-        callback = opts
-        opts = {}
-      }
-
-      opts = opts || {}
-
-      bandwidthStats(self, opts)
-        .then((stats) => callback(null, stats))
-        .catch((err) => callback(err))
+    bw: callbackify.variadic(async (opts = {}) => { // eslint-disable-line require-await
+      return bandwidthStats(opts)
     }),
     bwReadableStream: (opts) => toStream.source(_bwPullStream(opts)),
     bwPullStream: _bwPullStream

@@ -22,7 +22,7 @@ module.exports = function bootstrap (self) {
       const config = await self._repo.config.get()
       return { Peers: config.Bootstrap }
     }),
-    add: callbackify(async (multiaddr, args = { default: false }) => {
+    add: callbackify.variadic(async (multiaddr, args = { default: false }) => {
       if (multiaddr && !isValidMultiaddr(multiaddr)) {
         throw invalidMultiaddrError(multiaddr)
       }
@@ -39,7 +39,7 @@ module.exports = function bootstrap (self) {
         Peers: args.default ? defaultConfig().Bootstrap : [multiaddr]
       }
     }),
-    rm: callbackify(async (multiaddr, args = { all: false }) => {
+    rm: callbackify.variadic(async (multiaddr, args = { all: false }) => {
       if (multiaddr && !isValidMultiaddr(multiaddr)) {
         throw invalidMultiaddrError(multiaddr)
       }

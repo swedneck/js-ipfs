@@ -4,7 +4,6 @@
 const TLRU = require('../../utils/tlru')
 const { default: PQueue } = require('p-queue')
 const { default: ky } = require('ky-universal')
-const nodeify = require('promise-nodeify')
 
 // Avoid sending multiple queries for the same hostname by caching results
 const cache = new TLRU(1000)
@@ -37,11 +36,7 @@ const ipfsPath = (response) => {
   throw new Error(response.Message)
 }
 
-module.exports = (fqdn, opts = {}, cb) => {
-  if (typeof opts === 'function') {
-    cb = opts
-    opts = {}
-  }
+module.exports = async (fqdn, opts = {}) => { // eslint-disable-line require-await
   const resolveDnslink = async (fqdn, opts = {}) => {
     const searchParams = new URLSearchParams(opts)
     searchParams.set('arg', fqdn)
@@ -58,5 +53,5 @@ module.exports = (fqdn, opts = {}, cb) => {
     return ipfsPath(response)
   }
 
-  return nodeify(resolveDnslink(fqdn, opts), cb)
+  return resolveDnslink(fqdn, opts)
 }

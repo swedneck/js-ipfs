@@ -1,7 +1,6 @@
 'use strict'
 
 const debug = require('debug')
-const setImmediate = require('async/setImmediate')
 const log = debug('ipfs:mfs-preload')
 log.error = debug('ipfs:mfs-preload:error')
 
@@ -12,8 +11,8 @@ module.exports = (self) => {
   if (!options.enabled) {
     log('MFS preload disabled')
     return {
-      start: (cb) => setImmediate(cb),
-      stop: (cb) => setImmediate(cb)
+      start: async () => {},
+      stop: async () => {}
     }
   }
 
@@ -42,18 +41,14 @@ module.exports = (self) => {
   }
 
   return {
-    start (cb) {
-      self.files.stat('/', (err, stats) => {
-        if (err) return cb(err)
-        rootCid = stats.hash
-        log(`monitoring MFS root ${rootCid}`)
-        timeoutId = setTimeout(preloadMfs, options.interval)
-        cb()
-      })
+    async start () {
+      const stats = await self.files.stat('/')
+      rootCid = stats.hash
+      log(`monitoring MFS root ${rootCid}`)
+      timeoutId = setTimeout(preloadMfs, options.interval)
     },
-    stop (cb) {
+    stop () {
       clearTimeout(timeoutId)
-      cb()
     }
   }
 }

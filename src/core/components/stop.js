@@ -1,12 +1,9 @@
 'use strict'
 
-const promisify = require('promisify-es6')
 const callbackify = require('callbackify')
 
 module.exports = (self) => {
   return callbackify(async () => {
-    callback = callback || function noop () {}
-
     self.log('stop')
 
     if (self.state.state() === 'stopped') {
@@ -27,8 +24,8 @@ module.exports = (self) => {
 
     try {
       return Promise.all([
-        promisify(self._ipnd.republisher.stop)(),
-        promisify(self._mfsPreload.stop)(),
+        self._ipns.republisher.stop(),
+        self._mfsPreload.stop(),
         libp2p.stop()
       ])
     } catch (err) {
